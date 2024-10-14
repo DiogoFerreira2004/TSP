@@ -26,7 +26,7 @@ isort (x:xs) = insert x (isort xs)
 --- Note: you can use the function nub from Data.List to remove repetitions from a list. ---
 --- Note: you can use the function concatMap from Data.List to concatenate the lists of cities from the tuples of the roadmap. ---
 cities :: RoadMap -> [City]
-cities ourRoadMap = isort $ Data.List.nub $ concatMap (\(a,b,_) -> [a,b]) ourRoadMap
+cities ourRoadMap = isort . Data.List.nub $ concatMap (\(a,b,_) -> [a,b]) ourRoadMap
 
 --- 2. Implement the function areAdjacent :: RoadMap -> City -> City -> Bool that returns True if the two cities are adjacent in the roadmap, and False otherwise. ---
 --- Note: you can use the function any from to check if there is any tuple in the roadmap that has the two cities. ---
@@ -45,17 +45,22 @@ distance ourRoadMap city1 city2 = case filter (\(c1, c2, _) -> (city1 == c1 && c
 --- Note: you can use the function map to transform the tuples of the roadmap into tuples with the city and the distance. ---
 --- Note: you can use the function filter to get the tuples that have the city. ---
 adjacent :: RoadMap -> City -> [(City,Distance)]
-adjacent ourRoadMap city1 = map (\(c1,c2, d) -> if c1 == city1 then (c2, d) else (c1, d)) $ filter (\(c1, c2, _) -> (city1 == c1) || (city1 == c2)) ourRoadMap
+adjacent ourRoadMap city1 = (map (\(c1,c2, d) -> if c1 == city1 then (c2, d) else (c1, d)) . filter (\(c1, c2, _) -> (city1 == c1) || (city1 == c2))) ourRoadMap
 
 --- 5. Implement the function pathDistance :: RoadMap -> Path -> Distance that returns the total distance of a path in the roadmap. ---
 --- Note: you can use the function zip to get the pairs of cities in the path. ---
 --- Note: you can use the distance function to get the distance between the city and the adjacent city. ---
 --- Note: you can use the function map to get the distances between the pairs of cities. ---
 --- Note: you can use the function sum to get the total distance of the path. ---
-pathDistance :: RoadMap -> Path -> Distance
-pathDistance ourRoadMap ourPath = sum $ map (\(c1, c2) -> case distance ourRoadMap c1 c2 of
-    Just d -> d
-    Nothing -> 0) $ zip ourPath (tail ourPath)
+pathDistance :: RoadMap -> Path -> Maybe Distance
+pathDistance ourRoadMap ourPath = case ourPath of
+    [] -> Just 0
+    [city] -> Just 0
+    (city1:city2:remainingPath) -> case distance ourRoadMap city1 city2 of
+        Just d -> case pathDistance ourRoadMap (city2:remainingPath) of
+            Just d2 -> Just (d + d2)
+            Nothing -> Nothing
+        Nothing -> Nothing
 
 rome :: RoadMap -> [City]
 rome = undefined
@@ -66,6 +71,8 @@ isStronglyConnected = undefined
 shortestPath :: RoadMap -> City -> City -> [Path]
 shortestPath = undefined
 
+
+--- Note: Usar biblioteca Bits ---
 travelSales :: RoadMap -> Path
 travelSales = undefined
 
