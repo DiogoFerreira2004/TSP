@@ -62,15 +62,50 @@ pathDistance ourRoadMap ourPath = case ourPath of
             Nothing -> Nothing
         Nothing -> Nothing
 
+--- 6. Implement the function rome :: RoadMap -> [City] that returns a list of the cities with the most amount of other cities connected. ---
+--- Note: you can use the function cities to get a list of all the cities without repetition. ---
+--- Note: you can use the function map to create a list of tuples containing the city itself as the first element and the degree of the city (number of roads connected to that city) as the second element. ---
+--- Note: you can use the function filter in conjunction with the lambda function (checks whether the current city is present in either position of the tuple given by our roadmap), to get a list of all the tuples in our roadmap that involve the current city. ---
+--- Note: you can use the function length to get the length of the list produced by the function filter. ---
+--- Note: you can use the function map in conjunction with the function snd to get the second element of the tuple (represents each city's number of road connections).---
+--- Note: you can use the function maximum to get the maximum degree (highest number of roads connected). ---
+--- Note: you can use the function map in conjunction with the function fst and the function filter to get the first element of the tuple (city name) with the number of road connections matching the maximum number of road connections. ---
 rome :: RoadMap -> [City]
-rome = undefined
+rome ourRoadMap =
+    let
+        allCities = cities ourRoadMap 
+        cityDegrees = map (\city -> (city, length $ filter (\(c1, c2, _) -> city == c1 || city == c2) ourRoadMap)) allCities
+        maxDegree = maximum $ map snd cityDegrees
+    in
+        map fst $ filter (\(_, degree) -> degree == maxDegree) cityDegrees
 
+--- 7. Implement the function isStronglyConnected :: RoadMap -> Bool that returns True if all the cities in the roadmap are connected to eachother and False otherwise. ---
+--- Note: you can use the function elem to check if the current city is already visited, if True no more cities are reachable and the list of visited cities is returned (BASE CASE). ---
+--- Note: you can use the function foldl to add the current city to the list of visited cities and then recursively call dfs on each neighbor. ---
+--- Note: (\vis (nextCity, _) -> dfs ourRoadMap nextCity vis) : applies dfs to the city connected to the current city. ---
+--- Note: (curCity : visCities) : adds current city to the list of visited cities. ---
+--- Note: (adjacent ourRoadMap curCity) : using adjacent function (defined above) to get a list of cities directly connected to the current city. ---
+dfs :: RoadMap -> City -> [City] -> [City]
+dfs ourRoadMap curCity visCities
+    | curCity `elem` visCities = visCities
+    | otherwise = foldl (\vis (nextCity, _) -> dfs ourRoadMap nextCity vis)
+                        (curCity : visCities)
+                        (adjacent ourRoadMap curCity)
+
+--- Note: you can use the function cities to get a list of all the cities without repetition. ---
+--- Note: you can use the function head to get the first city of the list (Since the graph is undirected, it's enough to perform a dfs from one city only and check if all other cities were visited). ---
+--- Note: you can use the function dfs to perform a depth first search in order to explore all reachable cities from the starting city. ---
+--- Note: you can use the function elem to check if each city from all cities (from function cities) is present in the visited cities list (from dfs). ---
+--- Note: (`elem` visCities) is shorthand for : (\city -> city `elem` visCities). ---
+--- Note: you can use the function all to check if all the previous elem checks are true. ---    
 isStronglyConnected :: RoadMap -> Bool
-isStronglyConnected = undefined
+isStronglyConnected ourRoadMap =
+    let allCities = cities ourRoadMap
+        visCities = dfs ourRoadMap (head $ allCities) []
+    in  all (`elem` visCities) allCities
 
 shortestPath :: RoadMap -> City -> City -> [Path]
 shortestPath = undefined
-
 
 --- Note: Usar biblioteca Bits ---
 travelSales :: RoadMap -> Path
