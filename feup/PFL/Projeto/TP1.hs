@@ -63,21 +63,17 @@ pathDistance ourRoadMap ourPath = case ourPath of
         Nothing -> Nothing
 
 --- 6. Implement the function rome :: RoadMap -> [City] that returns a list of the cities with the most amount of other cities connected. ---
---- Note: you can use the function cities to get a list of all the cities without repetition. ---
 --- Note: you can use the function map to create a list of tuples containing the city itself as the first element and the degree of the city (number of roads connected to that city) as the second element. ---
 --- Note: you can use the function filter in conjunction with the lambda function (checks whether the current city is present in either position of the tuple given by our roadmap), to get a list of all the tuples in our roadmap that involve the current city. ---
 --- Note: you can use the function length to get the length of the list produced by the function filter. ---
+--- Note: you can use the function cities to get a list of all the cities without repetition. ---
 --- Note: you can use the function map in conjunction with the function snd to get the second element of the tuple (represents each city's number of road connections).---
 --- Note: you can use the function maximum to get the maximum degree (highest number of roads connected). ---
 --- Note: you can use the function map in conjunction with the function fst and the function filter to get the first element of the tuple (city name) with the number of road connections matching the maximum number of road connections. ---
 rome :: RoadMap -> [City]
 rome ourRoadMap =
-    let
-        allCities = cities ourRoadMap 
-        cityDegrees = map (\city -> (city, length $ filter (\(c1, c2, _) -> city == c1 || city == c2) ourRoadMap)) allCities
-        maxDegree = maximum $ map snd cityDegrees
-    in
-        map fst $ filter (\(_, degree) -> degree == maxDegree) cityDegrees
+    let cityDegrees = map (\city -> (city, length $ filter (\(c1, c2, _) -> city == c1 || city == c2) ourRoadMap)) $ cities ourRoadMap 
+    in map fst $ filter (\(_, degree) -> degree == maximum (map snd cityDegrees)) cityDegrees
 
 --- 7. Implement the function isStronglyConnected :: RoadMap -> Bool that returns True if all the cities in the roadmap are connected to eachother and False otherwise. ---
 --- Note: you can use the function elem to check if the current city is already visited, if True no more cities are reachable and the list of visited cities is returned (BASE CASE). ---
