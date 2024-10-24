@@ -12,21 +12,12 @@ type Distance = Int
 
 type RoadMap = [(City,City,Distance)]
 
-insert :: (Ord a) => a -> [a] -> [a]
-insert x [] = [x]
-insert x (y:ys)
-    | x <= y = x : (y:ys)
-    | otherwise = y : insert x ys
-
-isort :: (Ord a) => [a] -> [a]
-isort [] = []
-isort (x:xs) = insert x (isort xs)
 
 --- 1. Implement the function cities :: RoadMap -> [City] that returns the list of cities in the roadmap, without repetitions. ---
 --- Note: you can use the function nub from Data.List to remove repetitions from a list. ---
 --- Note: you can use the function concatMap from Data.List to concatenate the lists of cities from the tuples of the roadmap. ---
 cities :: RoadMap -> [City]
-cities ourRoadMap = isort . Data.List.nub $ concatMap (\(a,b,_) -> [a,b]) ourRoadMap
+cities ourRoadMap = Data.List.nub $ concatMap (\(a,b,_) -> [a,b]) ourRoadMap
 
 --- 2. Implement the function areAdjacent :: RoadMap -> City -> City -> Bool that returns True if the two cities are adjacent in the roadmap, and False otherwise. ---
 --- Note: you can use the function any from to check if there is any tuple in the roadmap that has the two cities. ---
@@ -100,8 +91,16 @@ isStronglyConnected ourRoadMap =
         visCities = dfs ourRoadMap (head $ allCities) []
     in  all (`elem` visCities) allCities
 
+
+--- 8 
 shortestPath :: RoadMap -> City -> City -> [Path]
-shortestPath = undefined
+shortestPath ourRoadMap startCity endCity = [possibleSP | possibleSP <- allPossiblePaths, pathDistance ourRoadMap possibleSP /= Nothing, minimum $ map (\possibleSP -> pathDistance ourRoadMap allPossiblePaths)]
+    where allPossiblePaths = dfsShortestPath ourRoadMap startCity endCity []
+
+dfsShortestPath :: RoadMap -> City -> City -> [City] -> [Path]
+dfsShortestPath ourRoadMap currentVisitingCity endCity visitedCities
+    | currentVisitingCity == endCity = [[currentVisitingCity]]
+    | otherwise = concatMap (\(nextCity, _) -> map (currentVisitingCity:) (dfsShortestPath ourRoadMap nextCity endCity (currentVisitingCity:visitedCities))) $ filter (\(c, _) -> c `notElem` visitedCities) (adjacent ourRoadMap currentVisitingCity)
 
 --- Note: Usar biblioteca Bits ---
 travelSales :: RoadMap -> Path
@@ -109,7 +108,7 @@ travelSales = undefined
 
 -- Some graphs to test your work
 gTest1 :: RoadMap
-gTest1 = [("7","6",1),("8","2",2),("6","5",2),("0","1",4),("2","5",4),("8","6",6),("2","3",7),("7","8",7),("0","7",8),("1","2",8),("3","4",9),("5","4",10),("1","7",11),("3","5",14)]
+gTest1 = [("7","6",1),("8","2",2),("6","5",2),("0","1",4), ("2","5",4),("8","6",6),("2","3",7),("7","8",7),("0","7",8),("1","2",8),("3","4",9),("5","4",10),("1","7",11),("3","5",14)]
 
 gTest2 :: RoadMap
 gTest2 = [("0","1",10),("0","2",15),("0","3",20),("1","2",35),("1","3",25),("2","3",30)]
