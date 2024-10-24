@@ -107,8 +107,21 @@ dfsShortestPath ourRoadMap currentVisitingCity endCity visitedCities
     | otherwise = concatMap (\(nextCity, _) -> map (currentVisitingCity:) (dfsShortestPath ourRoadMap nextCity endCity (currentVisitingCity:visitedCities))) $ filter (\(c, _) -> c `notElem` visitedCities) (adjacent ourRoadMap currentVisitingCity)
 
 --- Note: Usar biblioteca Bits ---
+
+transformRoadMap :: RoadMap -> [(City, [(City, Distance)])]
+transformRoadMap ourRoadMap = map (\city -> (city, adjacent ourRoadMap city)) $ cities ourRoadMap
+
+generateAllCompletePaths :: RoadMap -> [Path]
+generateAllCompletePaths ourRoadMap = map (\city -> dfsAllCities ourRoadMap city []) $ cities ourRoadMap 
+
+dfsAllCities :: RoadMap -> City -> [City] -> Path
+dfsAllCities currentVisitingCity visitedCities
+    | length visitedCities == length (cities ourRoadMap) = [currentVisitingCity]
+    | otherwise = concatMap (\(nextCity, _) -> map (currentVisitingCity:) (dfsAllCities ourRoadMap nextCity (currentVisitingCity:visitedCities))) $ filter (\(c, _) -> c `notElem` visitedCities) (adjacent ourRoadMap currentVisitingCity)
+
 travelSales :: RoadMap -> Path
 travelSales = undefined
+
 
 -- Some graphs to test your work
 gTest1 :: RoadMap
