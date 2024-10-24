@@ -111,16 +111,19 @@ dfsShortestPath ourRoadMap currentVisitingCity endCity visitedCities
 transformRoadMap :: RoadMap -> [(City, [(City, Distance)])]
 transformRoadMap ourRoadMap = map (\city -> (city, adjacent ourRoadMap city)) $ cities ourRoadMap
 
-generateAllCompletePaths :: RoadMap -> [Path]
-generateAllCompletePaths ourRoadMap = map (\city -> dfsAllCities ourRoadMap city []) $ cities ourRoadMap 
+generateAllCompletePaths :: RoadMap -> City -> [(City, Distance)] -> [Path]
+generateAllCompletePaths ourRoadMap startCity adjcentCities = filter (\path -> length path == length (cities ourRoadMap)) allPaths
+    where allPaths = map (\(city, _) -> dfsShortestPath ourRoadMap startCity city []) adjcentCities
 
-dfsAllCities :: RoadMap -> City -> [City] -> Path
-dfsAllCities currentVisitingCity visitedCities
-    | length visitedCities == length (cities ourRoadMap) = [currentVisitingCity]
-    | otherwise = concatMap (\(nextCity, _) -> map (currentVisitingCity:) (dfsAllCities ourRoadMap nextCity (currentVisitingCity:visitedCities))) $ filter (\(c, _) -> c `notElem` visitedCities) (adjacent ourRoadMap currentVisitingCity)
 
 travelSales :: RoadMap -> Path
-travelSales = undefined
+travelSales ourRoadMap = [possibleSP | possibleSP <- allCompletePaths, pathDistance ourRoadMap possibleSP /= Nothing, pathDistance ourRoadMap possibleSP == minimum (map (\possibleSP -> pathDistance ourRoadMap possibleSP) allCompletePaths)]
+    where 
+        startCity = head $ cities ourRoadMap
+        adjacentCities = adjacent ourRoadMap startCity
+        allPaths = generateAllCompletePaths ourRoadMap startCity adjacentCities
+        allCompletePaths = map (\path -> path ++ [startCity]) allPaths
+
 
 
 -- Some graphs to test your work
