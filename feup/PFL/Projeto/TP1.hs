@@ -92,10 +92,14 @@ isStronglyConnected ourRoadMap =
     in  all (`elem` visCities) allCities
 
 
---- 8 
+--- 8. Implement the function shortestPath :: RoadMap -> City -> City -> [Path] that returns the shortest path between two cities in the roadmap. ---
+--- Note: you can use the function dfsShortestPath to get all possible paths between the two cities. ---
+--- Note: you can use the function pathDistance to get the distance of each possible path. ---
+--- Note: you can use the function minimum to get the minimum distance of all possible paths. ---
+
 shortestPath :: RoadMap -> City -> City -> [Path]
-shortestPath ourRoadMap startCity endCity = [possibleSP | possibleSP <- allPossiblePaths, pathDistance ourRoadMap possibleSP /= Nothing, minimum $ map (\possibleSP -> pathDistance ourRoadMap allPossiblePaths)]
-    where allPossiblePaths = dfsShortestPath ourRoadMap startCity endCity []
+shortestPath ourRoadMap startCity endCity = [possibleSP | possibleSP <- allPossiblePaths, pathDistance ourRoadMap possibleSP /= Nothing, pathDistance ourRoadMap possibleSP == minimum (map (\possibleSP -> pathDistance ourRoadMap possibleSP) allPossiblePaths)]
+    where allPossiblePaths = dfsShortestPath ourRoadMap startCity endCity []   
 
 dfsShortestPath :: RoadMap -> City -> City -> [City] -> [Path]
 dfsShortestPath ourRoadMap currentVisitingCity endCity visitedCities
