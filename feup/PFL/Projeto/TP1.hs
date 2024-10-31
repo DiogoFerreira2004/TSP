@@ -5,12 +5,13 @@ import qualified Data.Bits
 -- PFL 2024/2025 Practical assignment 1
 
 -- Uncomment the some/all of the first three lines to import the modules, do not change the code of these lines.
-
+type RoadMap = [(City,City,Distance)]
 type City = String
 type Path = [City]
 type Distance = Int
+type CitiesDistanceMatrix = Data.Array.Array (Int, Int) (Maybe Distance)
+type AdjacentCities =  [(City,[(City,Distance)])]
 
-type RoadMap = [(City,City,Distance)]
 
 
 --- 1. Implement the function cities :: RoadMap -> [City] that returns the list of cities in the roadmap, without repetitions. ---
@@ -22,13 +23,13 @@ cities ourRoadMap = Data.List.nub $ concatMap (\(a,b,_) -> [a,b]) ourRoadMap
 --- 2. Implement the function areAdjacent :: RoadMap -> City -> City -> Bool that returns True if the two cities are adjacent in the roadmap, and False otherwise. ---
 --- Note: you can use the function any from to check if there is any tuple in the roadmap that has the two cities. ---
 areAdjacent :: RoadMap -> City -> City -> Bool
-areAdjacent ourRoadMap city1 city2 = any (\(c1, c2, _) -> (city1 == c1 && city2 == c2) || (city1 == c2 && city2 == c1)) ourRoadMap 
+areAdjacent ourRoadMap city1 city2 = any (\(startCity, endCity, _) -> (city1 == startCity && city2 == endCity) || (city1 == endCity && city2 == startCity)) ourRoadMap 
 
 --- 3. Implement the function distance :: RoadMap -> City -> City -> Maybe Distance that returns the distance between two cities in the roadmap, if they are adjacent, and Nothing otherwise. ---
 --- Note: you can use the function filter to get the tuples that have the two cities. ---
 --- Note: you can use pattern matching to get the distance from the tuple. ---
 distance :: RoadMap -> City -> City -> Maybe Distance
-distance ourRoadMap city1 city2 = case filter (\(c1, c2, _) -> (city1 == c1 && city2 == c2) || (city1 == c2 && city2 == c1)) ourRoadMap of
+distance ourRoadMap city1 city2 = case filter (\(startCity, endCity, _) -> (city1 == startCity && city2 == endCity) || (city1 == endCity && city2 == startCity)) ourRoadMap of
     [] -> Nothing
     [(_, _, d)] -> Just d
 
@@ -36,7 +37,7 @@ distance ourRoadMap city1 city2 = case filter (\(c1, c2, _) -> (city1 == c1 && c
 --- Note: you can use the function map to transform the tuples of the roadmap into tuples with the city and the distance. ---
 --- Note: you can use the function filter to get the tuples that have the city. ---
 adjacent :: RoadMap -> City -> [(City,Distance)]
-adjacent ourRoadMap city1 = (map (\(c1,c2, d) -> if c1 == city1 then (c2, d) else (c1, d)) . filter (\(c1, c2, _) -> (city1 == c1) || (city1 == c2))) ourRoadMap
+adjacent ourRoadMap city1 = (map (\(startCity,endCity, d) -> if startCity == city1 then (endCity, d) else (startCity, d)) . filter (\(startCity, endCity, _) -> (city1 == startCity) || (city1 == endCity))) ourRoadMap
 
 --- 5. Implement the function pathDistance :: RoadMap -> Path -> Distance that returns the total distance of a path in the roadmap. ---
 --- Note: you can use the function zip to get the pairs of cities in the path. ---
@@ -63,7 +64,7 @@ pathDistance ourRoadMap ourPath = case ourPath of
 --- Note: you can use the function map in conjunction with the function fst and the function filter to get the first element of the tuple (city name) with the number of road connections matching the maximum number of road connections. ---
 rome :: RoadMap -> [City]
 rome ourRoadMap =
-    let cityDegrees = map (\city -> (city, length $ filter (\(c1, c2, _) -> city == c1 || city == c2) ourRoadMap)) $ cities ourRoadMap 
+    let cityDegrees = map (\city -> (city, length $ filter (\(startCity, endCity, _) -> city == startCity || city == endCity) ourRoadMap)) $ cities ourRoadMap 
     in map fst $ filter (\(_, degree) -> degree == maximum (map snd cityDegrees)) cityDegrees
 
 --- 7. Implement the function isStronglyConnected :: RoadMap -> Bool that returns True if all the cities in the roadmap are connected to eachother and False otherwise. ---
@@ -80,7 +81,7 @@ dfs ourRoadMap curCity visCities
                         (adjacent ourRoadMap curCity)
 
 --- Note: you can use the function cities to get a list of all the cities without repetition. ---
---- Note: you can use the function head to get the first city of the list (Since the graph is undirected, it's enough to perform a dfs from one city only and check if all other cities were visited). ---
+--- Note: you can use the function head to get the first city of the list (Since the ourRoadMap is undirected, it's enough to perform a dfs from one city only and check if all other cities were visited). ---
 --- Note: you can use the function dfs to perform a depth first search in order to explore all reachable cities from the starting city. ---
 --- Note: you can use the function elem to check if each city from all cities (from function cities) is present in the visited cities list (from dfs). ---
 --- Note: (`elem` visCities) is shorthand for : (\city -> city `elem` visCities). ---
@@ -108,30 +109,31 @@ dfsShortestPath ourRoadMap currentVisitingCity endCity visitedCities
 
 --- Note: Usar biblioteca Bits ---
 
-transformRoadMap :: RoadMap -> [(City, [(City, Distance)])]
-transformRoadMap ourRoadMap = map (\city -> (city, adjacent ourRoadMap city)) $ cities ourRoadMap
+generateAdjacentCities :: RoadMap -> AdjacentCities
+generateAdjacentCities ourRoadMap = map (\city -> (city, adjacent ourRoadMap city)) $ cities ourRoadMap
 
-generateAllCompletePaths :: RoadMap -> City -> [(City, Distance)] -> [Path]
-generateAllCompletePaths ourRoadMap startCity adjcentCities = filter (\path -> length path == length (cities ourRoadMap)) allPaths
-    where allPaths = map (\(city, _) -> dfsShortestPath ourRoadMap startCity city []) adjcentCities
-
+generateCitiesDistanceMatrix :: RoadMap -> CitiesDistanceMatrix
+generateCitiesDistanceMatrix ourRoadMap = Data.Array.array arrayBounds ([((startCity,endCity), distance ourRoadMap (show startCity) (show endCity)) | startCity<-[0..limit],endCity<-[0..limit]])
+                        where
+                              limit = length (Data.List.sort $ cities ourRoadMap) - 1
+                              arrayBounds = ((0,0),(limit,limit))
 
 travelSales :: RoadMap -> Path
-travelSales ourRoadMap = [possibleSP | possibleSP <- allCompletePaths, pathDistance ourRoadMap possibleSP /= Nothing, pathDistance ourRoadMap possibleSP == minimum (map (\possibleSP -> pathDistance ourRoadMap possibleSP) allCompletePaths)]
-    where 
-        startCity = head $ cities ourRoadMap
-        adjacentCities = adjacent ourRoadMap startCity
-        allPaths = generateAllCompletePaths ourRoadMap startCity adjacentCities
-        allCompletePaths = map (\path -> path ++ [startCity]) allPaths
+travelSales ourRoadMap = case isStronglyConnected ourRoadMap of
+    False -> []
+    True -> ["1"]
 
 
 
--- Some graphs to test your work
+
+
+
+-- Some ourRoadMaps to test your work
 gTest1 :: RoadMap
 gTest1 = [("7","6",1),("8","2",2),("6","5",2),("0","1",4), ("2","5",4),("8","6",6),("2","3",7),("7","8",7),("0","7",8),("1","2",8),("3","4",9),("5","4",10),("1","7",11),("3","5",14)]
 
 gTest2 :: RoadMap
 gTest2 = [("0","1",10),("0","2",15),("0","3",20),("1","2",35),("1","3",25),("2","3",30)]
 
-gTest3 :: RoadMap -- unconnected graph
+gTest3 :: RoadMap -- unconnected ourRoadMap
 gTest3 = [("0","1",4),("2","3",2)]
