@@ -11,6 +11,7 @@ type Path = [City]
 type Distance = Int
 type CitiesDistanceMatrix = Data.Array.Array (Int, Int) (Maybe Distance)
 type AdjacentCities =  [(City,[(City,Distance)])]
+type Bit = Integer
 
 
 
@@ -39,11 +40,11 @@ distance ourRoadMap city1 city2 = case filter (\(startCity, endCity, _) -> (city
 adjacent :: RoadMap -> City -> [(City,Distance)]
 adjacent ourRoadMap city1 = (map (\(startCity,endCity, d) -> if startCity == city1 then (endCity, d) else (startCity, d)) . filter (\(startCity, endCity, _) -> (city1 == startCity) || (city1 == endCity))) ourRoadMap
 
---- 5. Implement the function pathDistance :: RoadMap -> Path -> Distance that returns the total distance of a path in the roadmap. ---
---- Note: you can use the function zip to get the pairs of cities in the path. ---
+--- 5. Implement the function pathDistance :: RoadMap -> Path -> Distance that returns the total distance of a currentPath in the roadmap. ---
+--- Note: you can use the function zip to get the pairs of cities in the currentPath. ---
 --- Note: you can use the distance function to get the distance between the city and the adjacent city. ---
 --- Note: you can use the function map to get the distances between the pairs of cities. ---
---- Note: you can use the function sum to get the total distance of the path. ---
+--- Note: you can use the function sum to get the total distance of the currentPath. ---
 pathDistance :: RoadMap -> Path -> Maybe Distance
 pathDistance ourRoadMap ourPath = case ourPath of
     [] -> Just 0
@@ -84,18 +85,18 @@ dfs ourRoadMap curCity visCities
 --- Note: you can use the function head to get the first city of the list (Since the ourRoadMap is undirected, it's enough to perform a dfs from one city only and check if all other cities were visited). ---
 --- Note: you can use the function dfs to perform a depth first search in order to explore all reachable cities from the starting city. ---
 --- Note: you can use the function elem to check if each city from all cities (from function cities) is present in the visited cities list (from dfs). ---
---- Note: (`elem` visCities) is shorthand for : (\city -> city `elem` visCities). ---
+--- Note: (elem visCities) is shorthand for : (\city -> city elem visCities). ---
 --- Note: you can use the function all to check if all the previous elem checks are true. ---    
 isStronglyConnected :: RoadMap -> Bool
 isStronglyConnected ourRoadMap =
     let allCities = cities ourRoadMap
-        visCities = dfs ourRoadMap (head $ allCities) []
+        visCities = dfs ourRoadMap (head allCities) []
     in  all (`elem` visCities) allCities
 
 
---- 8. Implement the function shortestPath :: RoadMap -> City -> City -> [Path] that returns the shortest path between two cities in the roadmap. ---
+--- 8. Implement the function shortestPath :: RoadMap -> City -> City -> [Path] that returns the shortest currentPath between two cities in the roadmap. ---
 --- Note: you can use the function dfsShortestPath to get all possible paths between the two cities. ---
---- Note: you can use the function pathDistance to get the distance of each possible path. ---
+--- Note: you can use the function pathDistance to get the distance of each possible currentPath. ---
 --- Note: you can use the function minimum to get the minimum distance of all possible paths. ---
 
 shortestPath :: RoadMap -> City -> City -> [Path]
@@ -105,7 +106,9 @@ shortestPath ourRoadMap startCity endCity = [possibleSP | possibleSP <- allPossi
 dfsShortestPath :: RoadMap -> City -> City -> [City] -> [Path]
 dfsShortestPath ourRoadMap currentVisitingCity endCity visitedCities
     | currentVisitingCity == endCity = [[currentVisitingCity]]
-    | otherwise = concatMap (\(nextCity, _) -> map (currentVisitingCity:) (dfsShortestPath ourRoadMap nextCity endCity (currentVisitingCity:visitedCities))) $ filter (\(c, _) -> c `notElem` visitedCities) (adjacent ourRoadMap currentVisitingCity)
+    | otherwise = concatMap (\(nextCity, _) ->
+        map (currentVisitingCity:) (dfsShortestPath ourRoadMap nextCity endCity (currentVisitingCity:visitedCities))
+    ) $ filter (\(c, _) -> c `notElem` visitedCities) (adjacent ourRoadMap currentVisitingCity)
 
 --- Note: Usar biblioteca Bits ---
 
@@ -118,11 +121,49 @@ generateCitiesDistanceMatrix ourRoadMap = Data.Array.array arrayBounds ([((start
                               limit = length (Data.List.sort $ cities ourRoadMap) - 1
                               arrayBounds = ((0,0),(limit,limit))
 
+isCityVisited :: Bit -> Int -> Bool
+isCityVisited visitedMask cityToBeChecked = Data.Bits.testBit visitedMask cityToBeChecked
+
+setAllCitiesVisited :: Int -> Bit
+setAllCitiesVisited numberOfCities = (Data.Bits.shiftL 1 numberOfCities) - 1
+
+updateVisitedCities :: Bit -> Int -> Bit
+updateVisitedCities visitedMask cityToBeVisited = Data.Bits.setBit visitedMask cityToBeVisited
+
+travelSalesRecursiveDynamicProgramming :: CitiesDistanceMatrix -> Bit -> Int -> Bit -> Path -> (Distance, Path)
+travelSalesRecursiveDynamicProgramming citiesDistanceMatrix visitedMask currentPos allCitiesVisited currentPath =
+    if (visitedMask == allCitiesVisited) 
+    then 
+        case citiesDistanceMatrix Data.Array.! (currentPos, 0) of
+            Just dist -> (dist, reverse (show currentPos : currentPath)) -- Retorna a distância e o caminho completo
+            Nothing   -> (100000000, []) -- Retorna um valor alto se não houver caminho válido
+    else
+        case Data.Array.bounds citiesDistanceMatrix of
+            ((_, _), (maxRow, _)) ->
+                -- Gerar todos os possíveis caminhos a partir das cidades não visitadas
+                minimum [ 
+                    case citiesDistanceMatrix Data.Array.! (currentPos, city) of
+                        Just distToCity ->
+                            case travelSalesRecursiveDynamicProgramming 
+                                    citiesDistanceMatrix 
+                                    (updateVisitedCities visitedMask city) 
+                                    city 
+                                    allCitiesVisited 
+                                    (show currentPos : currentPath) of
+                                (totalDist, path) -> (distToCity + totalDist, path)
+                        Nothing -> (100000000, []) -- Usa um valor alto para caminhos inválidos
+                    | city <- [0..maxRow], not (isCityVisited visitedMask city)
+                ]
+
+    
+
 travelSales :: RoadMap -> Path
 travelSales ourRoadMap = case isStronglyConnected ourRoadMap of
     False -> []
-    True -> ["1"]
-
+    True -> snd (travelSalesRecursiveDynamicProgramming citiesDistanceMatrix 1 0 allCitiesVisited []) ++ ["0"]
+    where
+        allCitiesVisited = setAllCitiesVisited (length $ cities ourRoadMap)
+        citiesDistanceMatrix = generateCitiesDistanceMatrix ourRoadMap
 
 
 
