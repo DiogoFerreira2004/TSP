@@ -111,36 +111,85 @@ dfsShortestPath ourRoadMap currentVisitingCity endCity visitedCities
     ) $ filter (\(c, _) -> c `notElem` visitedCities) (adjacent ourRoadMap currentVisitingCity)
 
 --- Note: Usar biblioteca Bits ---
+------------------------------------------------------------------------
+--type Distance = Int
+--type CitiesDistanceMatrix = Data.Array.Array (Int, Int) (Maybe Distance)
+--type AdjacentCities =  [(City,[(City,Distance)])]
+--type Bit = Integer
+---------------------------------------------------------------------------
+--- 9. TravelSales
 
+-- generates adjacent cities in the following manner :
+-- [(City,[(City,Distance)])] - Getting us a list of all the cities, with all their adjacent cities and respective distances.
+
+-- using map we apply our function that for each city(given by "cities" (returns a list with all cities))
+-- gives us a tuple of the city and their adjacent cities(given by "adjancent"(returns a list of tuples that represent the adjacent cities and their respective distance))
 generateAdjacentCities :: RoadMap -> AdjacentCities
 generateAdjacentCities ourRoadMap = map (\city -> (city, adjacent ourRoadMap city)) $ cities ourRoadMap
 
+-- generates 2D matrix in the following manner:
+-- Data.Array.Array (Int, Int) (Maybe Distance) - giving us an array holding the distance between city pairs
 generateCitiesDistanceMatrix :: RoadMap -> CitiesDistanceMatrix
+-- Data.Array.array constructs a new array with (1st argument)the specified bounds(set by arrayBounds)
+-- (Second Argument) fills the array. In this case we want a pair of cities and their respective distances. 
+-- This will fill the array with cities from 0 to the limit set.
+-- Calculates the distance using the "distance" functions that calculates the distance between 2 given cities
 generateCitiesDistanceMatrix ourRoadMap = Data.Array.array arrayBounds ([((startCity,endCity), distance ourRoadMap (show startCity) (show endCity)) | startCity<-[0..limit],endCity<-[0..limit]])
                         where
-                              limit = length (Data.List.sort $ cities ourRoadMap) - 1
-                              arrayBounds = ((0,0),(limit,limit))
+                              limit = length (Data.List.sort $ cities ourRoadMap) - 1 -- gives the index of the last city in a sorted list of all cities. Used as an upperbound for the matrix indexes 
+                              arrayBounds = ((0,0),(limit,limit)) -- defines the bounds of the 2D array. Meaning the cities will vary from 0 to the limit
 
+-- testBit : Checks if a specific bit is set
+-- checks if cityToBeChecked has already been visisted by examining the corresponding bit in visitedMask
 isCityVisited :: Bit -> Int -> Bool
 isCityVisited visitedMask cityToBeChecked = Data.Bits.testBit visitedMask cityToBeChecked
 
+-- shiftL : shifts bits to the left by a specific number. Creates a bitmask(sequece of bits that represent a binary state) with the number of cities.
+-- In this case, all cities are set to 1, creating a bit mask like the following example: 
+-- (Example: 3 cities -> 1000 and because we subtract 1 => 111 - representing the 3 cities as all visited
 setAllCitiesVisited :: Int -> Bit
 setAllCitiesVisited numberOfCities = (Data.Bits.shiftL 1 numberOfCities) - 1
 
+-- setBit : Sets a specific bit to 1 (marks city as visited)
 updateVisitedCities :: Bit -> Int -> Bit
 updateVisitedCities visitedMask cityToBeVisited = Data.Bits.setBit visitedMask cityToBeVisited
 
+-- List of Arguments:
+    -- CitiesDistanceMatrix (2D array that stores distances between pairs of cities)
+    -- Bit  (represents a bitmask to update after visiting a city(initialy 1, only current city is visited))
+    -- Int  (represents the current position in the function (initialy 0, the starting city we choose))
+    -- Bit  (represents the bitmask with all cities visited (111..etc))
+    -- Path (represents the current path we have travelled so far, updating throughout the function and eventually becoming the final path)
+-- Returns a tuple (Distance, Path), that represents the total distance of the final path chosen.
 travelSalesRecursiveDynamicProgramming :: CitiesDistanceMatrix -> Bit -> Int -> Bit -> Path -> (Distance, Path)
 travelSalesRecursiveDynamicProgramming citiesDistanceMatrix visitedMask currentPos allCitiesVisited currentPath =
+    -- Represents the base case that happens when the bitmask in visitedMask is equal to allCitiesVisited bitmask.
+    -- No other cities to visit
     if (visitedMask == allCitiesVisited) 
-    then 
+    then
+        -- Data.Array.! is used to find the distance between our current city to the starting city
+            -- if it exists, returns distance and adds the current city(last city visited) to our final path and reverses it because we append the cities to the begginning of the list
+            -- if not, very high value and empty path to basically nullify this path
         case citiesDistanceMatrix Data.Array.! (currentPos, 0) of
-            Just dist -> (dist, reverse (show currentPos : currentPath)) -- Retorna a distância e o caminho completo
-            Nothing   -> (100000000, []) -- Retorna um valor alto se não houver caminho válido
+            Just dist -> (dist, reverse (show currentPos : currentPath))
+            Nothing   -> (100000000, [])
     else
+        -- Data.Array.bounds returns the bounds of the array in our case ((0,0), (limit,limit))
         case Data.Array.bounds citiesDistanceMatrix of
-            ((_, _), (maxRow, _)) ->
-                -- Gerar todos os possíveis caminhos a partir das cidades não visitadas
+            ((_, _), (maxRow, _)) -> -- get the maxRow in our case(limit)
+-- Comprehension list with following conditions:
+    -- city <- [0..maxRow] to make sure cities are selected from 0 to limit
+    -- not(isCityVisited visitedMask city) checks if the city is already visited
+-- if a distance exists between the current city and the next city, we call the function recursively with the following arguments
+        -- citiesDistanceMatrix, our matrix remains the same
+        -- We update the bitmask, signalling that we visited the current city
+        -- We sent the city that was neighbouring our current city
+        -- allCitiesVisited, our bitmask with all 1's remains the same
+        -- we add the city we just visited to the current path. (Note, our path is being created backwards)
+    -- (totalDist, path) -> (distToCity + totalDist, path)
+        -- the function returns (totalDist, path) and we add the distance to the city to our current total path distance
+-- if a distance doesn't exist, we return a very big distance and an empty list to make it undesirable for selection
+-- All of this is wrapped inside minimum, in order to select the path with the least total distance
                 minimum [ 
                     case citiesDistanceMatrix Data.Array.! (currentPos, city) of
                         Just distToCity ->
@@ -151,19 +200,20 @@ travelSalesRecursiveDynamicProgramming citiesDistanceMatrix visitedMask currentP
                                     allCitiesVisited 
                                     (show currentPos : currentPath) of
                                 (totalDist, path) -> (distToCity + totalDist, path)
-                        Nothing -> (100000000, []) -- Usa um valor alto para caminhos inválidos
+                        Nothing -> (100000000, [])
                     | city <- [0..maxRow], not (isCityVisited visitedMask city)
                 ]
 
     
 
 travelSales :: RoadMap -> Path
-travelSales ourRoadMap = case isStronglyConnected ourRoadMap of
-    False -> []
+travelSales ourRoadMap = case isStronglyConnected ourRoadMap of -- Check if roadmap is strongly connected(checks if all the cities are connected to each other)
+    False -> [] -- False : return empty list as there is no way of having a path that passes through every city
+    -- True : returns the second element of the tuple (Distance, Path) and adds the starting city "0" to the Path in order for it to begin and end in the same city
     True -> snd (travelSalesRecursiveDynamicProgramming citiesDistanceMatrix 1 0 allCitiesVisited []) ++ ["0"]
     where
-        allCitiesVisited = setAllCitiesVisited (length $ cities ourRoadMap)
-        citiesDistanceMatrix = generateCitiesDistanceMatrix ourRoadMap
+        allCitiesVisited = setAllCitiesVisited (length $ cities ourRoadMap) -- bitmask all set to 1, representing all visited cities
+        citiesDistanceMatrix = generateCitiesDistanceMatrix ourRoadMap -- 2D array representing a pair of cities and their respective distance (City,City) (Maybe Distance)
 
 
 
