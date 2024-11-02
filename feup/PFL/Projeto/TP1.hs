@@ -131,7 +131,7 @@ generateAdjacentCities ourRoadMap = map (\city -> (city, adjacent ourRoadMap cit
 -- Data.Array.Array (Int, Int) (Maybe Distance) - giving us an array holding the distance between city pairs
 generateCitiesDistanceMatrix :: RoadMap -> CitiesDistanceMatrix
 -- Data.Array.array constructs a new array with (1st argument)the specified bounds(set by arrayBounds)
--- (Second Argument) fills the array. In this case we want a pair of cities and their respective distances. 
+-- (Second Argument) fills the array. In this case we want a pair of cities as indexes and their respective distance as the element. 
 -- This will fill the array with cities from 0 to the limit set.
 -- Calculates the distance using the "distance" functions that calculates the distance between 2 given cities
 generateCitiesDistanceMatrix ourRoadMap = Data.Array.array arrayBounds ([((startCity,endCity), distance ourRoadMap (show startCity) (show endCity)) | startCity<-[0..limit],endCity<-[0..limit]])
